@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v4"
@@ -54,7 +55,18 @@ func main() {
 	gpio := os.Getenv("GPIO")
 
 	if gpio == "" {
-		gpio = "GPIO19"
+		gpio = "GPIO27"
+	}
+
+	addrStr := os.Getenv("I2C_ADDR")
+	addr := uint64(0x76)
+	if addrStr != "" {
+		addr, err = strconv.ParseUint(addrStr, 16, 16)
+
+		if err != nil {
+			fmt.Printf("Invalid I2C_ADDR: %s %s\n", addrStr, err)
+			os.Exit(2)
+		}
 	}
 
 	fmt.Fprintf(os.Stderr, "dbHost=%s, sensorName=%s, i2cBus=%s, gpio=%s\n", dbHost, sensorName, i2cBus, gpio)
@@ -66,11 +78,14 @@ func main() {
 	} else if len(os.Args) > 1 && os.Args[1] == "dht22" {
 		fmt.Println("sensor is dht22")
 		provider = &Dht22{gpio, i2cBus, sensorName}
+	} else if len(os.Args) > 1 && os.Args[1] == "bmp280" {
+		fmt.Println("sensor is bmp280")
+		provider = &Bmx280{i2cBus, uint16(addr), sensorName, false}
 	} else if len(os.Args) > 1 && os.Args[1] == "bme280" || len(os.Args) == 1 {
 		fmt.Println("sensor is bme280")
-		provider = &Bme280{i2cBus, sensorName}
+		provider = &Bmx280{i2cBus, uint16(addr), sensorName, true}
 	} else {
-		fmt.Println("usage: rpi-temp [mcp9808|dht22|bme280]")
+		fmt.Println("usage: rpi-temp [mcp9808|dht22|bme280,bmp280]")
 		os.Exit(2)
 	}
 

@@ -10,12 +10,14 @@ import (
 	"periph.io/x/host/v3"
 )
 
-type Bme280 struct {
-	bus      string
-	location string
+type Bmx280 struct {
+	bus          string
+	address      uint16
+	location     string
+	readHumidity bool
 }
 
-func (b *Bme280) Measure() Measurement {
+func (b *Bmx280) Measure() Measurement {
 	// Load all the drivers:
 	if _, err := host.Init(); err != nil {
 		log.Fatal(err)
@@ -29,7 +31,7 @@ func (b *Bme280) Measure() Measurement {
 
 	// Open a handle to a bme280/bmp280 connected on the I²C bus using default
 	// settings:
-	dev, err := bmxx80.NewI2C(bus, 0x76, &bmxx80.DefaultOpts)
+	dev, err := bmxx80.NewI2C(bus, b.address, &bmxx80.DefaultOpts)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,7 +47,12 @@ func (b *Bme280) Measure() Measurement {
 
 	t := env.Temperature.Celsius()
 	p := float64(env.Pressure) / 1000000000.0
-	h := float64(env.Humidity) / 100000.0
+
+	var h float64
+	if b.readHumidity {
+		h = float64(env.Humidity) / 100000.0
+		// h = &_h
+	}
 
 	return Measurement{
 		b.location,
